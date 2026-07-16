@@ -1,7 +1,10 @@
 import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
+import { v2 as cloudinary } from 'cloudinary'
+
+cloudinary.config({
+  cloudinary_url: process.env.CLOUDINARY_URL,
+})
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -20,24 +23,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Chỉ chấp nhận JPG, PNG, WEBP, GIF' }, { status: 400 })
   }
 
-  const maxSize = 2 * 1024 * 1024 // 2MB
+  const maxSize = 2 * 1024 * 1024
   if (file.size > maxSize) {
     return NextResponse.json({ error: 'Ảnh tối đa 2MB' }, { status: 400 })
   }
 
-  const ext = file.name.split('.').pop() || 'jpg'
-  const filename = `${session.user.id}-${Date.now()}.${ext}`
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'avatars')
-
   try {
-    await mkdir(uploadDir, { recursive: true })
     const bytes = await file.arrayBuffer()
-    await writeFile(path.join(uploadDir, filename), Buffer.from(bytes))
+    const buffer = Buffer.from(bytes)
+
+    const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'quizviet/avatars',
+          public_id: `${session.user!.id}-${Date.now()}`,
+          overwrite: true,
+          transformation: [{ width: 200, height: 200, crop: 'fill', gravity: 'face' }],
+        },
+        (error, result) => {
+          if (error || !result) reject(error)
+          else resolve(result as { secure_url: string })
+        }
+      )
+      stream.end(buffer)
+    })
+
+    return NextResponse.json({ url: result.secure_url })
   } catch (e) {
     console.error('[upload/avatar]', e)
-    return NextResponse.json({ error: 'Không thể lưu file trên server' }, { status: 500 })
+    return NextResponse.json({ error: 'Lỗi upload ảnh' }, { status: 500 })
   }
-
-  const url = `/uploads/avatars/${filename}`
-  return NextResponse.json({ url })
 }
