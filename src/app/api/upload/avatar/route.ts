@@ -29,9 +29,14 @@ export async function POST(request: Request) {
   const filename = `${session.user.id}-${Date.now()}.${ext}`
   const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'avatars')
 
-  await mkdir(uploadDir, { recursive: true })
-  const bytes = await file.arrayBuffer()
-  await writeFile(path.join(uploadDir, filename), Buffer.from(bytes))
+  try {
+    await mkdir(uploadDir, { recursive: true })
+    const bytes = await file.arrayBuffer()
+    await writeFile(path.join(uploadDir, filename), Buffer.from(bytes))
+  } catch (e) {
+    console.error('[upload/avatar]', e)
+    return NextResponse.json({ error: 'Không thể lưu file trên server' }, { status: 500 })
+  }
 
   const url = `/uploads/avatars/${filename}`
   return NextResponse.json({ url })
