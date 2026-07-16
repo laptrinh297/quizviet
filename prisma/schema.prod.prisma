@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  image         String?
+  role          String    @default("user")
+  isLocked      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  studySets     StudySet[]
+  folders       Folder[]
+  studySessions StudySession[]
+  streak        Streak?
+  knownTerms    KnownTerm[]
+  srData        SRData[]
+}
+
+model Streak {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastStudiedAt  DateTime?
+}
+
+model StudySet {
+  id            String         @id @default(cuid())
+  title         String
+  description   String?
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folderId      String?
+  folder        Folder?        @relation(fields: [folderId], references: [id])
+  isPublic      Boolean        @default(false)
+  isDeleted     Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  terms         Term[]
+  studySessions StudySession[]
+}
+
+model Term {
+  id         String      @id @default(cuid())
+  term       String
+  definition String
+  setId      String
+  studySet   StudySet    @relation(fields: [setId], references: [id], onDelete: Cascade)
+  order      Int         @default(0)
+  createdAt  DateTime    @default(now())
+  knownBy    KnownTerm[]
+  srData     SRData[]
+}
+
+model KnownTerm {
+  id     String @id @default(cuid())
+  termId String
+  term   Term   @relation(fields: [termId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([termId, userId])
+}
+
+model SRData {
+  id          String   @id @default(cuid())
+  termId      String
+  term        Term     @relation(fields: [termId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interval    Int      @default(1)
+  repetitions Int      @default(0)
+  easeFactor  Float    @default(2.5)
+  nextReview  DateTime @default(now())
+  @@unique([termId, userId])
+}
+
+model Folder {
+  id        String     @id @default(cuid())
+  name      String
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studySets StudySet[]
+  createdAt DateTime   @default(now())
+}
+
+model StudySession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  setId     String
+  studySet  StudySet @relation(fields: [setId], references: [id], onDelete: Cascade)
+  mode      String
+  score     Int?
+  total     Int?
+  createdAt DateTime @default(now())
+}

@@ -1,8 +1,6 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+# Dependencies
+node_modules/
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -10,32 +8,62 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+# Next.js
+.next/
+out/
 
-# next.js
-/.next/
-/out/
+# Production build
+build/
 
-# production
-/build
+# Environment files — KHÔNG commit lên git
+.env
+.env*.local
+.env.staging
+.env.production
+# Chỉ commit file mẫu nếu cần (không chứa secret thật)
+# .env.example được phép commit
 
-# misc
+# Database SQLite
+prisma/dev.db
+prisma/dev.db-journal
+prisma/*.db
+
+# Prisma generated client
+lib/generated/
+src/lib/generated/
+
+# OS
 .DS_Store
-*.pem
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# debug
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Vercel
+.vercel
+
+# Docker
+docker-compose.override.yml
+
+# Testing
+coverage/

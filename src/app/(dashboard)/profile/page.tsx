@@ -1,0 +1,188 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { useToast } from '@/components/ui/toaster'
+import { User, Lock, Camera, Save } from 'lucide-react'
+
+export default function ProfilePage() {
+  const { data: session, update } = useSession()
+  const { showToast } = useToast()
+
+  const [profile, setProfile] = useState({ name: '', image: '' })
+  const [password, setPassword] = useState({ old: '', new: '', confirm: '' })
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
+
+  useEffect(() => {
+    if (session?.user) {
+      setProfile({
+        name: session.user.name || '',
+        image: session.user.image || '',
+      })
+    }
+  }, [session])
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: profile.name, image: profile.image }),
+      })
+      if (res.ok) {
+        await update({ name: profile.name, image: profile.image })
+        showToast('Đã cập nhật hồ sơ', 'success')
+      } else {
+        const err = await res.json()
+        showToast(err.error || 'Lỗi khi cập nhật', 'error')
+      }
+    } catch {
+      showToast('Đã có lỗi xảy ra', 'error')
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
+  const handleChangePassword = async () => {
+    if (password.new !== password.confirm) {
+      showToast('Mật khẩu mới không khớp', 'error')
+      return
+    }
+    if (password.new.length < 6) {
+      showToast('Mật khẩu mới phải có ít nhất 6 ký tự', 'error')
+      return
+    }
+
+    setIsSavingPassword(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldPassword: password.old, newPassword: password.new }),
+      })
+      if (res.ok) {
+        showToast('Đã đổi mật khẩu thành công', 'success')
+        setPassword({ old: '', new: '', confirm: '' })
+      } else {
+        const err = await res.json()
+        showToast(err.error || 'Lỗi khi đổi mật khẩu', 'error')
+      }
+    } catch {
+      showToast('Đã có lỗi xảy ra', 'error')
+    } finally {
+      setIsSavingPassword(false)
+    }
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold text-gray-900">Hồ sơ cá nhân</h1>
+
+      {/* Avatar Preview */}
+      <div className="flex items-center gap-4">
+        <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
+          {profile.image ? (
+            <img src={profile.image} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-indigo-700 text-2xl font-bold">
+              {profile.name?.charAt(0).toUpperCase() || 'U'}
+            </span>
+          )}
+        </div>
+        <div>
+          <p className="font-semibold text-gray-900 text-lg">{profile.name || 'Chưa đặt tên'}</p>
+          <p className="text-gray-500 text-sm">{session?.user?.email}</p>
+          <p className="text-xs text-gray-400 mt-0.5 capitalize">{(session?.user as any)?.role || 'user'}</p>
+        </div>
+      </div>
+
+      {/* Profile Info */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <User size={18} className="text-indigo-600" />
+            <h2 className="font-semibold text-gray-900">Thông tin cá nhân</h2>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Input
+            label="Họ và tên"
+            value={profile.name}
+            onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
+            placeholder="Nhập họ và tên"
+          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              value={session?.user?.email || ''}
+              disabled
+              className="block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+              <Camera size={14} />
+              URL ảnh đại diện
+            </label>
+            <input
+              value={profile.image}
+              onChange={e => setProfile(p => ({ ...p, image: e.target.value }))}
+              placeholder="https://example.com/avatar.jpg"
+              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleSaveProfile} disabled={isSavingProfile}>
+              <Save size={14} />
+              {isSavingProfile ? 'Đang lưu...' : 'Lưu thông tin'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Change Password */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Lock size={18} className="text-indigo-600" />
+            <h2 className="font-semibold text-gray-900">Đổi mật khẩu</h2>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Input
+            label="Mật khẩu hiện tại"
+            type="password"
+            value={password.old}
+            onChange={e => setPassword(p => ({ ...p, old: e.target.value }))}
+            placeholder="••••••••"
+          />
+          <Input
+            label="Mật khẩu mới"
+            type="password"
+            value={password.new}
+            onChange={e => setPassword(p => ({ ...p, new: e.target.value }))}
+            placeholder="Ít nhất 6 ký tự"
+          />
+          <Input
+            label="Xác nhận mật khẩu mới"
+            type="password"
+            value={password.confirm}
+            onChange={e => setPassword(p => ({ ...p, confirm: e.target.value }))}
+            placeholder="Nhập lại mật khẩu mới"
+          />
+          <div className="flex justify-end">
+            <Button onClick={handleChangePassword} disabled={isSavingPassword}>
+              <Lock size={14} />
+              {isSavingPassword ? 'Đang đổi...' : 'Đổi mật khẩu'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

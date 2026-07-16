@@ -1,0 +1,24 @@
+# Dùng để test PostgreSQL trên máy local trước khi deploy
+# Chạy: docker compose -f docker-compose.staging.yml up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: quizviet-staging-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: quizviet
+    ports:
+      - "5432:5432"
+    volumes:
+      - quizviet_staging_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d quizviet"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  quizviet_staging_data:
