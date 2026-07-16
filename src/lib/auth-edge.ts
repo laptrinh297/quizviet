@@ -2,6 +2,7 @@ import NextAuth from 'next-auth'
 
 // Edge-compatible auth config (no DB calls, only JWT session validation)
 export const { auth } = NextAuth({
+  trustHost: true,
   session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
   pages: {
     signIn: '/login',
