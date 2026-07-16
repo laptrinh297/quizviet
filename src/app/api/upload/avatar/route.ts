@@ -2,15 +2,16 @@ import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { v2 as cloudinary } from 'cloudinary'
 
-cloudinary.config({
-  cloudinary_url: process.env.CLOUDINARY_URL,
-})
-
 export async function POST(request: Request) {
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  if (!process.env.CLOUDINARY_URL) {
+    return NextResponse.json({ error: 'Cloudinary chưa được cấu hình' }, { status: 500 })
+  }
+  cloudinary.config({ cloudinary_url: process.env.CLOUDINARY_URL })
 
   const formData = await request.formData()
   const file = formData.get('file') as File | null
