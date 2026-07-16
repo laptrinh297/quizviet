@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         create: original.studySets.map(set => ({
           title: set.title,
           description: set.description,
-          userId: session.user.id,
+          user: { connect: { id: session.user.id } },
           isPublic: false,
           terms: {
             create: set.terms.map(t => ({
