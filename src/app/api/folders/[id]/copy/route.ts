@@ -7,6 +7,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
+  const userId = userId as string
 
   const original = await prisma.folder.findUnique({
     where: { id },
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Không tìm thấy thư mục' }, { status: 404 })
   }
 
-  if (!original.isPublic && original.userId !== session.user.id) {
+  if (!original.isPublic && original.userId !== userId) {
     return NextResponse.json({ error: 'Thư mục này không công khai' }, { status: 403 })
   }
 
@@ -30,13 +31,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const newFolder = await prisma.folder.create({
     data: {
       name: `${original.name} (Copy)`,
-      userId: session.user.id,
+      userId: userId,
       isPublic: false,
       studySets: {
         create: original.studySets.map(set => ({
           title: set.title,
           description: set.description,
-          user: { connect: { id: session.user.id } },
+          user: { connect: { id: userId } },
           isPublic: false,
           terms: {
             create: set.terms.map(t => ({
