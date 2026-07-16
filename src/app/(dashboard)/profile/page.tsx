@@ -39,7 +39,18 @@ export default function ProfilePage() {
       const data = await res.json()
       if (res.ok) {
         setProfile(p => ({ ...p, image: data.url }))
-        showToast('Đã tải ảnh lên', 'success')
+        // Tự động lưu URL vào DB ngay sau khi upload
+        const saveRes = await fetch('/api/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: profile.name, image: data.url }),
+        })
+        if (saveRes.ok) {
+          await update({ image: data.url })
+          showToast('Đã cập nhật ảnh đại diện', 'success')
+        } else {
+          showToast('Upload thành công nhưng không thể lưu, hãy bấm Lưu thông tin', 'error')
+        }
       } else {
         showToast(data.error || 'Lỗi tải ảnh', 'error')
       }
