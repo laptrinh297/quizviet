@@ -13,9 +13,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma client dùng schema PostgreSQL
-RUN DATABASE_URL="postgresql://placeholder" npx prisma generate
+# Placeholder URL để prisma generate và next build dùng đúng PostgreSQL adapter.
+# URL thật sẽ được inject lúc runtime từ docker-compose / Dokploy.
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 
+# Generate Prisma Client cho PostgreSQL (prisma.config.ts sẽ chọn schema.prod.prisma)
+RUN npx prisma generate
+
+# Build Next.js
 RUN npm run build
 
 # ── Stage 3: Production runtime ─────────────────────────────────
@@ -30,11 +35,11 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Next.js standalone output
-COPY --from=builder /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Prisma schema + config (để chạy migrate khi startup)
+# Prisma files để chạy db push khi container start
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/node_modules ./node_modules
@@ -44,5 +49,5 @@ USER nextjs
 
 EXPOSE 3000
 
-# Chạy migrate rồi mới start app
+# Migrate schema rồi mới start app
 CMD ["sh", "-c", "npx prisma db push --skip-generate && node server.js"]
