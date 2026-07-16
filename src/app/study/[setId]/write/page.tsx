@@ -7,6 +7,8 @@ import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/components/ui/toaster'
 import { CheckCircle, XCircle, Trophy, RotateCcw, ChevronLeft, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { useStudyDirection, getQA } from '@/hooks/use-study-direction'
+import { DirectionPicker } from '@/components/study/direction-picker'
 
 interface Term {
   id: string
@@ -40,6 +42,7 @@ export default function WritePage() {
   const params = useParams()
   const { showToast } = useToast()
   const setId = params.setId as string
+  const { direction, setDirection } = useStudyDirection()
 
   const [terms, setTerms] = useState<Term[]>([])
   const [shuffled, setShuffled] = useState<Term[]>([])
@@ -59,23 +62,22 @@ export default function WritePage() {
         const t: Term[] = data.terms
         setTerms(t)
         setSetTitle(data.title)
-        const s = shuffle(t)
-        setShuffled(s)
+        setShuffled(shuffle(t))
       })
       .finally(() => setIsLoading(false))
   }, [setId])
 
   useEffect(() => {
-    if (!feedback) {
-      inputRef.current?.focus()
-    }
+    if (!feedback) inputRef.current?.focus()
   }, [feedback, currentIdx])
+
+  const current = shuffled[currentIdx]
+  const qa = current ? getQA(current, direction, currentIdx) : null
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (feedback) return
-    const current = shuffled[currentIdx]
-    const isCorrect = answer.trim().toLowerCase() === current.term.trim().toLowerCase()
+    if (feedback || !qa) return
+    const isCorrect = answer.trim().toLowerCase() === qa.answer.trim().toLowerCase()
     setFeedback(isCorrect ? 'correct' : 'wrong')
     setStats(s => ({
       correct: s.correct + (isCorrect ? 1 : 0),
@@ -99,14 +101,14 @@ export default function WritePage() {
   }
 
   const handleKnown = async () => {
-    const current = shuffled[currentIdx]
+    if (!current || !qa) return
     await fetch(`/api/sets/${setId}/known`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ termId: current.id, known: true }),
     })
     showToast('Đã đánh dấu là biết', 'success')
-    setAnswer(current.term)
+    setAnswer(qa.answer)
     setFeedback('correct')
     setStats(s => ({ ...s, correct: s.correct + 1 }))
   }
@@ -160,8 +162,6 @@ export default function WritePage() {
     )
   }
 
-  const current = shuffled[currentIdx]
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200 px-4 py-3">
@@ -173,6 +173,7 @@ export default function WritePage() {
           <div className="flex items-center gap-3 text-sm">
             <span className="text-green-600 font-medium">{stats.correct} đúng</span>
             <span className="text-red-500 font-medium">{stats.wrong} sai</span>
+            <DirectionPicker direction={direction} onChange={d => { setDirection(d); setAnswer(''); setFeedback(null) }} />
           </div>
         </div>
       </div>
@@ -181,17 +182,17 @@ export default function WritePage() {
         <Progress value={currentIdx} max={shuffled.length} className="mb-8" />
         <p className="text-xs text-center text-gray-400 mb-6">{currentIdx + 1}/{shuffled.length}</p>
 
-        {/* Definition card */}
+        {/* Question card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-6">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Định nghĩa</p>
-          <p className="text-xl font-semibold text-gray-900 text-center">{current.definition}</p>
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">{qa?.questionLabel}</p>
+          <p className="text-xl font-semibold text-gray-900 text-center">{qa?.question}</p>
         </div>
 
         {/* Answer form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nhập thuật ngữ tương ứng
+              Nhập {qa?.answerLabel?.toLowerCase()} tương ứng
             </label>
             <input
               ref={inputRef}
@@ -219,11 +220,11 @@ export default function WritePage() {
                   {feedback === 'correct' ? 'Chính xác!' : 'Chưa đúng'}
                 </span>
               </div>
-              {feedback === 'wrong' && (
+              {feedback === 'wrong' && qa && (
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Đáp án đúng:</p>
-                  <CharDiff input={answer} expected={current.term} />
-                  <p className="text-sm font-bold text-gray-800 mt-1">→ {current.term}</p>
+                  <CharDiff input={answer} expected={qa.answer} />
+                  <p className="text-sm font-bold text-gray-800 mt-1">→ {qa.answer}</p>
                 </div>
               )}
             </div>

@@ -6,8 +6,8 @@ import { TermEditor, TermPair } from '@/components/sets/term-editor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Modal } from '@/components/ui/modal'
 import { useToast } from '@/components/ui/toaster'
+import { ImportModal } from '@/components/sets/import-modal'
 import { Save, Upload, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
@@ -30,7 +30,6 @@ export default function EditSetPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showImport, setShowImport] = useState(false)
-  const [csvText, setCsvText] = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -49,27 +48,9 @@ export default function EditSetPage() {
     }).finally(() => setIsLoading(false))
   }, [id])
 
-  const handleImport = () => {
-    const lines = csvText.trim().split('\n')
-    const parsed: TermPair[] = []
-    for (const line of lines) {
-      const parts = line.split(',')
-      if (parts.length >= 2) {
-        const term = parts[0].trim()
-        const definition = parts.slice(1).join(',').trim()
-        if (term && definition) {
-          parsed.push({ id: Math.random().toString(36).slice(2), term, definition })
-        }
-      }
-    }
-    if (parsed.length > 0) {
-      setTerms(prev => [...prev, ...parsed])
-      setShowImport(false)
-      setCsvText('')
-      showToast(`Đã nhập ${parsed.length} thuật ngữ`, 'success')
-    } else {
-      showToast('Không tìm thấy dữ liệu hợp lệ', 'error')
-    }
+  const handleImport = (parsed: TermPair[]) => {
+    setTerms(prev => [...prev, ...parsed])
+    showToast(`Đã nhập ${parsed.length} thuật ngữ`, 'success')
   }
 
   const handleSave = async () => {
@@ -196,24 +177,7 @@ export default function EditSetPage() {
         </div>
       </div>
 
-      <Modal isOpen={showImport} onClose={() => setShowImport(false)} title="Import từ CSV">
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Mỗi dòng: <code className="bg-gray-100 px-1 rounded">thuật ngữ,định nghĩa</code>
-          </p>
-          <textarea
-            value={csvText}
-            onChange={e => setCsvText(e.target.value)}
-            placeholder={'Hello,Xin chào\nGoodbye,Tạm biệt'}
-            className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 font-mono placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
-            rows={8}
-          />
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setShowImport(false)}>Hủy</Button>
-            <Button onClick={handleImport}>Import</Button>
-          </div>
-        </div>
-      </Modal>
+      <ImportModal isOpen={showImport} onClose={() => setShowImport(false)} onImport={handleImport} />
     </div>
   )
 }

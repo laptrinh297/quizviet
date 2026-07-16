@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { useToast } from '@/components/ui/toaster'
 import { CheckCircle, XCircle, Trophy, RotateCcw, ChevronLeft, ClipboardList } from 'lucide-react'
 import Link from 'next/link'
+import { useStudyDirection, getQA, type Direction } from '@/hooks/use-study-direction'
+import { DirectionPicker } from '@/components/study/direction-picker'
 
 interface Term {
   id: string
@@ -20,9 +20,10 @@ interface Question {
   id: string
   type: QuestionType
   question: string
+  questionLabel: string
   correctAnswer: string
   choices?: string[]
-  matchPairs?: Array<{ term: string; def: string }>
+  matchPairs?: Array<{ left: string; right: string; termId: string }>
 }
 
 interface UserAnswer {
@@ -33,55 +34,67 @@ function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5)
 }
 
-function buildTest(terms: Term[]): Question[] {
+function buildTest(terms: Term[], direction: Direction): Question[] {
   const qs: Question[] = []
   const shuffled = shuffle(terms)
 
   shuffled.forEach((term, idx) => {
     const total = shuffled.length
     const pct = idx / total
+    const qa = getQA(term, direction, idx)
 
     if (pct < 0.4) {
-      // MCQ
-      const wrong = shuffle(shuffled.filter(t => t.id !== term.id)).slice(0, 3).map(t => t.definition)
+      // MCQ: show question, pick correct answer
+      const wrong = shuffle(shuffled.filter(t => t.id !== term.id))
+        .slice(0, 3)
+        .map(t => getQA(t, direction, idx).answer)
       qs.push({
         id: `mcq-${term.id}`,
         type: 'mcq',
-        question: `"${term.term}" có nghĩa là gì?`,
-        correctAnswer: term.definition,
-        choices: shuffle([term.definition, ...wrong]),
+        question: `${qa.questionLabel}: "${qa.question}"`,
+        questionLabel: qa.questionLabel,
+        correctAnswer: qa.answer,
+        choices: shuffle([qa.answer, ...wrong]),
       })
     } else if (pct < 0.7) {
       // Fill in
       qs.push({
         id: `fill-${term.id}`,
         type: 'fill',
-        question: `Định nghĩa: "${term.definition}". Thuật ngữ là gì?`,
-        correctAnswer: term.term,
+        question: `${qa.questionLabel}: "${qa.question}". ${qa.answerLabel} là gì?`,
+        questionLabel: qa.questionLabel,
+        correctAnswer: qa.answer,
       })
     } else if (pct < 0.9) {
       // True/False
       const isTrue = Math.random() > 0.5
-      const wrongDef = isTrue ? term.definition : shuffle(shuffled.filter(t => t.id !== term.id))[0]?.definition || 'N/A'
+      const wrongAnswer = shuffle(shuffled.filter(t => t.id !== term.id))[0]
+      const displayAnswer = isTrue ? qa.answer : (wrongAnswer ? getQA(wrongAnswer, direction, idx).answer : 'N/A')
       qs.push({
         id: `tf-${term.id}`,
         type: 'truefalse',
-        question: `"${term.term}" có nghĩa là "${wrongDef}" - Đúng hay Sai?`,
+        question: `"${qa.question}" có ${qa.answerLabel.toLowerCase()} là "${displayAnswer}" - Đúng hay Sai?`,
+        questionLabel: qa.questionLabel,
         correctAnswer: isTrue ? 'true' : 'false',
         choices: ['true', 'false'],
       })
     }
   })
 
-  // Add one matching question
+  // Matching question: pair question side with answer side
   const matchTerms = shuffle(shuffled).slice(0, Math.min(5, shuffled.length))
   if (matchTerms.length >= 2) {
-    const pairs = matchTerms.map(t => ({ term: t.term, def: t.definition }))
+    const pairs = matchTerms.map((t, i) => {
+      const qa = getQA(t, direction, i)
+      return { left: qa.question, right: qa.answer, termId: t.id }
+    })
+    const firstQa = getQA(matchTerms[0], direction, 0)
     qs.push({
       id: 'matching-1',
       type: 'matching',
-      question: 'Ghép thuật ngữ với định nghĩa đúng:',
-      correctAnswer: JSON.stringify(Object.fromEntries(pairs.map(p => [p.term, p.def]))),
+      question: `Ghép ${firstQa.questionLabel.toLowerCase()} với ${firstQa.answerLabel.toLowerCase()} đúng:`,
+      questionLabel: firstQa.questionLabel,
+      correctAnswer: JSON.stringify(Object.fromEntries(pairs.map(p => [p.left, p.right]))),
       matchPairs: pairs,
     })
   }
@@ -92,6 +105,7 @@ function buildTest(terms: Term[]): Question[] {
 export default function TestPage() {
   const params = useParams()
   const setId = params.setId as string
+  const { direction, setDirection } = useStudyDirection()
 
   const [terms, setTerms] = useState<Term[]>([])
   const [questions, setQuestions] = useState<Question[]>([])
@@ -107,7 +121,7 @@ export default function TestPage() {
       .then(data => {
         setTerms(data.terms)
         setSetTitle(data.title)
-        setQuestions(buildTest(data.terms))
+        setQuestions(buildTest(data.terms, direction))
       })
       .finally(() => setIsLoading(false))
   }, [setId])
@@ -116,10 +130,10 @@ export default function TestPage() {
     setAnswers(prev => ({ ...prev, [qId]: val }))
   }
 
-  const setMatchAnswer = (qId: string, term: string, def: string) => {
+  const setMatchAnswer = (qId: string, left: string, right: string) => {
     setAnswers(prev => {
       const existing = (prev[qId] as { [k: string]: string }) || {}
-      return { ...prev, [qId]: { ...existing, [term]: def } }
+      return { ...prev, [qId]: { ...existing, [left]: right } }
     })
   }
 
@@ -130,7 +144,7 @@ export default function TestPage() {
       if (q.type === 'matching') {
         const correct_pairs = JSON.parse(q.correctAnswer)
         const user_pairs = (ans as { [k: string]: string }) || {}
-        const allMatch = Object.entries(correct_pairs).every(([t, d]) => user_pairs[t] === d)
+        const allMatch = Object.entries(correct_pairs).every(([l, r]) => user_pairs[l] === r)
         if (allMatch) correct++
       } else {
         if (typeof ans === 'string' && ans.trim().toLowerCase() === q.correctAnswer.trim().toLowerCase()) {
@@ -147,8 +161,9 @@ export default function TestPage() {
     })
   }
 
-  const restart = () => {
-    setQuestions(buildTest(terms))
+  const restart = (dir?: Direction) => {
+    const d = dir ?? direction
+    setQuestions(buildTest(terms, d))
     setAnswers({})
     setSubmitted(false)
     setScore(0)
@@ -159,7 +174,7 @@ export default function TestPage() {
     if (q.type === 'matching') {
       const correct_pairs = JSON.parse(q.correctAnswer)
       const user_pairs = (ans as { [k: string]: string }) || {}
-      return Object.entries(correct_pairs).every(([t, d]) => user_pairs[t] === d)
+      return Object.entries(correct_pairs).every(([l, r]) => user_pairs[l] === r)
     }
     return typeof ans === 'string' && ans.trim().toLowerCase() === q.correctAnswer.trim().toLowerCase()
   }
@@ -172,7 +187,7 @@ export default function TestPage() {
     )
   }
 
-  const pct = Math.round((score / questions.length) * 100)
+  const pct = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -182,16 +197,20 @@ export default function TestPage() {
             <ChevronLeft size={18} />
             <span className="text-sm font-medium">{setTitle}</span>
           </Link>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <ClipboardList size={14} />
-            {questions.length} câu hỏi
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <ClipboardList size={14} />
+              {questions.length} câu hỏi
+            </div>
+            {!submitted && (
+              <DirectionPicker direction={direction} onChange={d => { setDirection(d); restart(d) }} />
+            )}
           </div>
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-8">
         {submitted ? (
-          // Results
           <div>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center mb-8">
               <Trophy size={56} className="text-yellow-500 mx-auto mb-4" />
@@ -199,7 +218,7 @@ export default function TestPage() {
               <div className="text-6xl font-extrabold text-indigo-600 mb-2">{pct}%</div>
               <p className="text-gray-500">{score}/{questions.length} câu đúng</p>
               <div className="mt-6 flex gap-3 justify-center">
-                <Button onClick={restart}>
+                <Button onClick={() => restart()}>
                   <RotateCcw size={14} />
                   Làm lại
                 </Button>
@@ -209,7 +228,6 @@ export default function TestPage() {
               </div>
             </div>
 
-            {/* Review answers */}
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Chi tiết câu trả lời</h3>
             <div className="space-y-4">
               {questions.map((q, idx) => {
@@ -238,7 +256,6 @@ export default function TestPage() {
             </div>
           </div>
         ) : (
-          // Test form
           <div className="space-y-6">
             {questions.map((q, idx) => (
               <div key={q.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
@@ -298,19 +315,19 @@ export default function TestPage() {
                   <div className="space-y-3">
                     {q.matchPairs.map(pair => {
                       const matchAns = (answers[q.id] as { [k: string]: string }) || {}
-                      const availableDefs = q.matchPairs!.map(p => p.def)
+                      const availableRights = q.matchPairs!.map(p => p.right)
                       return (
-                        <div key={pair.term} className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-gray-900 w-1/3 shrink-0">{pair.term}</span>
+                        <div key={pair.left} className="flex items-center gap-3">
+                          <span className="text-sm font-medium text-gray-900 w-1/3 shrink-0">{pair.left}</span>
                           <span className="text-gray-300">→</span>
                           <select
-                            value={matchAns[pair.term] || ''}
-                            onChange={e => setMatchAnswer(q.id, pair.term, e.target.value)}
+                            value={matchAns[pair.left] || ''}
+                            onChange={e => setMatchAnswer(q.id, pair.left, e.target.value)}
                             className="flex-1 rounded-xl border-2 border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none"
                           >
-                            <option value="">Chọn định nghĩa...</option>
-                            {availableDefs.map(d => (
-                              <option key={d} value={d}>{d}</option>
+                            <option value="">Chọn đáp án...</option>
+                            {availableRights.map(r => (
+                              <option key={r} value={r}>{r}</option>
                             ))}
                           </select>
                         </div>
