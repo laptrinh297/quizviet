@@ -1,6 +1,4 @@
 import { auth } from './src/lib/auth-edge'
-import { getToken } from 'next-auth/jwt'
-import type { NextRequest } from 'next/server'
 
 export default auth(async (req) => {
   const { nextUrl, method } = req
@@ -24,11 +22,7 @@ export default auth(async (req) => {
   }
 
   if (nextUrl.pathname.startsWith('/admin')) {
-    // Đọc thẳng từ JWT token để tránh lỗi custom fields không được truyền qua req.auth
-    const token = await getToken({ req: req as unknown as NextRequest, secret: process.env.AUTH_SECRET })
-    console.log('[admin-check] token:', JSON.stringify(token))
-    console.log('[admin-check] req.auth.user:', JSON.stringify((session?.user as any)))
-    if ((token as any)?.role !== 'admin') {
+    if ((session?.user as any)?.role !== 'admin') {
       return Response.redirect(new URL('/dashboard', nextUrl))
     }
   }
