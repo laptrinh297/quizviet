@@ -71,7 +71,15 @@ function UserCard({ user, rank }: { user: UserSummary; rank: number }) {
   )
 }
 
+type Period = 'week' | 'month' | 'all'
+const PERIODS: { value: Period; label: string }[] = [
+  { value: 'week', label: 'Tuần này' },
+  { value: 'month', label: 'Tháng này' },
+  { value: 'all', label: 'Tất cả' },
+]
+
 export default function LeaderboardPage() {
+  const [period, setPeriod] = useState<Period>('all')
   const [top10, setTop10] = useState<UserSummary[]>([])
   const [searchResults, setSearchResults] = useState<UserSummary[] | null>(null)
   const [query, setQuery] = useState('')
@@ -80,11 +88,12 @@ export default function LeaderboardPage() {
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    fetch('/api/leaderboard')
+    setIsLoading(true)
+    fetch(`/api/leaderboard?period=${period}`)
       .then(r => r.json())
       .then(setTop10)
       .finally(() => setIsLoading(false))
-  }, [])
+  }, [period])
 
   const handleSearch = (q: string) => {
     setQuery(q)
@@ -120,6 +129,24 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
+      {/* Period tabs */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+        {PERIODS.map(p => (
+          <button
+            key={p.value}
+            onClick={() => { setPeriod(p.value); setSearchResults(null); setQuery('') }}
+            className={cn(
+              'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
+              period === p.value
+                ? 'bg-white text-indigo-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            )}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {/* Search */}
       <div className="relative">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -139,7 +166,7 @@ export default function LeaderboardPage() {
       <div className="flex items-center gap-2">
         {isSearchMode
           ? <><Users size={16} className="text-gray-400" /><span className="text-sm text-gray-500">Kết quả tìm kiếm</span></>
-          : <><Medal size={16} className="text-yellow-500" /><span className="text-sm font-medium text-gray-700">Top 10 người học nhiều nhất</span></>
+          : <><Medal size={16} className="text-yellow-500" /><span className="text-sm font-medium text-gray-700">Top 10 người học nhiều nhất {period === 'week' ? '(tuần này)' : period === 'month' ? '(tháng này)' : ''}</span></>
         }
       </div>
 

@@ -1,7 +1,11 @@
+import { redirect } from 'next/navigation'
+import { auth } from '@/lib/auth'
 import Link from 'next/link'
 import { BookOpen } from 'lucide-react'
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth()
+  if (session?.user) redirect('/dashboard')
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col">
       <div className="flex items-center justify-center py-8">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -39,31 +40,50 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   try {
-    const { title, description, folderId, terms } = await req.json()
+    const { title, description, folderId, terms, isPublic } = await req.json()
 
-    // Delete existing terms and recreate
-    await prisma.term.deleteMany({ where: { setId: id } })
+    // Smart upsert: preserve existing terms (keeps SRData/KnownTerm intact)
+    if (Array.isArray(terms)) {
+      const existingTerms = await prisma.term.findMany({ where: { setId: id }, select: { id: true } })
+      const existingIds = new Set(existingTerms.map((t: { id: string }) => t.id))
+
+      const incomingIds = new Set(
+        (terms as any[]).filter(t => existingIds.has(t.id)).map((t: any) => t.id)
+      )
+
+      // Delete removed terms
+      const toDelete = existingTerms.filter((t: { id: string }) => !incomingIds.has(t.id)).map((t: { id: string }) => t.id)
+      if (toDelete.length > 0) await prisma.term.deleteMany({ where: { id: { in: toDelete } } })
+
+      // Upsert each term
+      for (const t of terms as any[]) {
+        if (existingIds.has(t.id)) {
+          await prisma.term.update({
+            where: { id: t.id },
+            data: { term: t.term.trim(), definition: t.definition.trim(), order: t.order ?? 0 },
+          })
+        } else {
+          await prisma.term.create({
+            data: { term: t.term.trim(), definition: t.definition.trim(), order: t.order ?? 0, setId: id },
+          })
+        }
+      }
+    }
 
     const updated = await prisma.studySet.update({
       where: { id },
       data: {
-        title: title.trim(),
-        description: description?.trim() || null,
-        folderId: folderId || null,
-        terms: {
-          create: terms.map((t: any, i: number) => ({
-            term: t.term.trim(),
-            definition: t.definition.trim(),
-            order: t.order ?? i,
-          })),
-        },
+        ...(title !== undefined ? { title: title.trim() } : {}),
+        ...(description !== undefined ? { description: description?.trim() || null } : {}),
+        ...(folderId !== undefined ? { folderId: folderId || null } : {}),
+        ...(typeof isPublic === 'boolean' ? { isPublic } : {}),
       },
       include: { terms: { orderBy: { order: 'asc' } } },
     })
 
     return NextResponse.json(updated)
   } catch (error) {
-    console.error(error)
+    logger.error('PUT /api/sets/[id] failed', { error: String(error), id })
     return NextResponse.json({ error: 'Lỗi khi cập nhật' }, { status: 500 })
   }
 }

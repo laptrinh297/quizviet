@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/toaster'
 import { ImportModal } from '@/components/sets/import-modal'
 import { Save, Upload, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { setUrl } from '@/lib/utils'
 
 interface Folder {
   id: string
@@ -20,7 +21,7 @@ export default function EditSetPage() {
   const params = useParams()
   const router = useRouter()
   const { showToast } = useToast()
-  const id = params.id as string
+  const id = (params.id as string).split('-')[0]
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -82,7 +83,7 @@ export default function EditSetPage() {
       })
       if (res.ok) {
         showToast('Đã lưu thay đổi', 'success')
-        router.push(`/sets/${id}`)
+        router.push(setUrl(id, title.trim()))
       } else {
         const err = await res.json()
         showToast(err.error || 'Lỗi khi lưu', 'error')
@@ -104,11 +105,22 @@ export default function EditSetPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex items-center gap-4 mb-6">
-        <Link href={`/sets/${id}`} className="text-gray-400 hover:text-gray-600">
-          <ArrowLeft size={20} />
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Chỉnh sửa bộ từ vựng</h1>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <Link href={setUrl(id, title || id)} className="text-gray-400 hover:text-gray-600">
+            <ArrowLeft size={20} />
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900">Chỉnh sửa bộ từ vựng</h1>
+        </div>
+        <div className="flex gap-2">
+          <Link href={setUrl(id, title || id)}>
+            <Button variant="outline">Hủy</Button>
+          </Link>
+          <Button onClick={handleSave} disabled={isSaving}>
+            <Save size={16} />
+            {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -166,15 +178,6 @@ export default function EditSetPage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-3">
-          <Link href={`/sets/${id}`}>
-            <Button variant="outline">Hủy</Button>
-          </Link>
-          <Button onClick={handleSave} disabled={isSaving} size="lg">
-            <Save size={16} />
-            {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
-          </Button>
-        </div>
       </div>
 
       <ImportModal isOpen={showImport} onClose={() => setShowImport(false)} onImport={handleImport} />

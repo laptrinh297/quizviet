@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -8,21 +9,42 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const folderId = searchParams.get('folder')
+  const trashed = searchParams.get('trashed') === 'true'
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+  const limit = 18
+  const skip = (page - 1) * limit
+
+  const search = searchParams.get('q')?.trim()
 
   const where: any = {
     userId: session.user.id,
-    isDeleted: false,
+    isDeleted: trashed,
   }
 
   if (folderId) where.folderId = folderId
+  if (search) {
+    where.OR = [
+      { title: { contains: search } },
+      { description: { contains: search } },
+    ]
+  }
 
-  const sets = await prisma.studySet.findMany({
-    where,
-    include: { _count: { select: { terms: true } } },
-    orderBy: { updatedAt: 'desc' },
-  })
+  const [sets, total] = await Promise.all([
+    prisma.studySet.findMany({
+      where,
+      select: {
+        id: true, title: true, description: true,
+        updatedAt: true, isPublic: true, isDeleted: true,
+        _count: { select: { terms: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      skip,
+    }),
+    prisma.studySet.count({ where }),
+  ])
 
-  return NextResponse.json(sets)
+  return NextResponse.json({ sets, total, page, pages: Math.ceil(total / limit) })
 }
 
 export async function POST(req: NextRequest) {
@@ -59,7 +81,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(set, { status: 201 })
   } catch (error) {
-    console.error(error)
+    logger.error('POST /api/sets failed', { error: String(error) })
     return NextResponse.json({ error: 'Lỗi khi tạo bộ từ vựng' }, { status: 500 })
   }
 }

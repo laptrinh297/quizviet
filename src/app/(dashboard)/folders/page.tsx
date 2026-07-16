@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toaster'
-import { Folder, Plus, BookOpen, Trash2, Edit3, ArrowRight } from 'lucide-react'
+import { Folder, Plus, BookOpen, Trash2, Edit3, ArrowRight, Globe, Lock } from 'lucide-react'
 
 interface FolderItem {
   id: string
   name: string
+  isPublic: boolean
   createdAt: string
   _count: { studySets: number }
 }
@@ -80,6 +81,18 @@ export default function FoldersPage() {
     }
   }
 
+  const handleTogglePublic = async (folder: FolderItem) => {
+    const res = await fetch(`/api/folders/${folder.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isPublic: !folder.isPublic }),
+    })
+    if (res.ok) {
+      showToast(!folder.isPublic ? 'Thư mục đã công khai' : 'Thư mục đã riêng tư', 'success')
+      setFolders(fs => fs.map(f => f.id === folder.id ? { ...f, isPublic: !f.isPublic } : f))
+    }
+  }
+
   const handleDelete = async (folder: FolderItem) => {
     if (!confirm(`Xóa thư mục "${folder.name}"? Các bộ từ vựng sẽ không bị xóa.`)) return
     const res = await fetch(`/api/folders/${folder.id}`, { method: 'DELETE' })
@@ -119,6 +132,13 @@ export default function FoldersPage() {
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
+                      onClick={() => handleTogglePublic(folder)}
+                      title={folder.isPublic ? 'Công khai — nhấn để riêng tư' : 'Riêng tư — nhấn để công khai'}
+                      className={`p-1.5 rounded-lg transition-colors ${folder.isPublic ? 'text-green-500 hover:bg-green-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                    >
+                      {folder.isPublic ? <Globe size={14} /> : <Lock size={14} />}
+                    </button>
+                    <button
                       onClick={() => { setEditFolder(folder); setFolderName(folder.name); setShowEdit(true) }}
                       className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
                     >
@@ -132,7 +152,14 @@ export default function FoldersPage() {
                     </button>
                   </div>
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-1">{folder.name}</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-gray-900">{folder.name}</h3>
+                  {folder.isPublic && (
+                    <span className="inline-flex items-center gap-0.5 text-xs text-green-600">
+                      <Globe size={10} /> Công khai
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500 flex items-center gap-1">
                     <BookOpen size={12} />

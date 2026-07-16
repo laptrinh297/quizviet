@@ -9,7 +9,7 @@ import { CheckCircle, XCircle, Trophy, RotateCcw, ChevronLeft, Brain } from 'luc
 import Link from 'next/link'
 import { calculateSR } from '@/lib/sr-algorithm'
 import { useStudyDirection, getQA, type Direction } from '@/hooks/use-study-direction'
-import { DirectionPicker } from '@/components/study/direction-picker'
+import { LearnSettings } from '@/components/study/learn-settings'
 
 interface Term { id: string; term: string; definition: string }
 interface SRData { termId: string; interval: number; repetitions: number; easeFactor: number; nextReview: string }
@@ -44,13 +44,18 @@ export default function LearnPage() {
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null)
   const [isDone, setIsDone] = useState(false)
   const [stats, setStats] = useState({ correct: 0, wrong: 0 })
+  const [questionMode, setQuestionMode] = useState<'random' | 'mcq' | 'written'>('random')
+  const questionModeRef = useRef<'random' | 'mcq' | 'written'>('random')
+
+  useEffect(() => { questionModeRef.current = questionMode }, [questionMode])
 
   useEffect(() => {
     if (!feedback) inputRef.current?.focus()
   }, [currentIdx, feedback])
 
-  const buildQuestions = useCallback((allTerms: Term[], map: Map<string, SRData>, dir?: Direction) => {
+  const buildQuestions = useCallback((allTerms: Term[], map: Map<string, SRData>, dir?: Direction, mode?: 'random' | 'mcq' | 'written') => {
     const d = dir ?? directionRef.current
+    const m = mode ?? questionModeRef.current
     const due = allTerms.filter(t => {
       const sr = map.get(t.id)
       return !sr || new Date(sr.nextReview) <= new Date()
@@ -60,11 +65,10 @@ export default function LearnPage() {
 
     const qs: Question[] = selected.map((term, idx) => {
       const qa = getQA(term, d, idx)
-      const type: QuestionType = Math.random() > 0.5 ? 'mcq' : 'written'
+      const type: QuestionType = m === 'random' ? (Math.random() > 0.5 ? 'mcq' : 'written') : m
       let choices: string[] | undefined
 
       if (type === 'mcq') {
-        // Wrong choices from same "answer side" of other terms
         const wrong = shuffle(allTerms.filter(t => t.id !== term.id))
           .slice(0, 3)
           .map(t => getQA(t, d, idx).answer)
@@ -173,7 +177,12 @@ export default function LearnPage() {
           <div className="flex items-center gap-3 text-sm">
             <span className="text-green-600 font-medium">{stats.correct} đúng</span>
             <span className="text-red-500 font-medium">{stats.wrong} sai</span>
-            <DirectionPicker direction={direction} onChange={d => { setDirection(d); buildQuestions(terms, srMap, d) }} />
+            <LearnSettings
+              direction={direction}
+              questionMode={questionMode}
+              onDirectionChange={d => { setDirection(d); buildQuestions(terms, srMap, d) }}
+              onModeChange={m => { setQuestionMode(m); questionModeRef.current = m; buildQuestions(terms, srMap, undefined, m) }}
+            />
           </div>
         </div>
       </div>

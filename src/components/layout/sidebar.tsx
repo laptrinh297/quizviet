@@ -13,6 +13,9 @@ import {
   X,
   BarChart2,
   Trophy,
+  Globe,
+  Cpu,
+  Sparkles,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -24,9 +27,12 @@ const navItems = [
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { href: '/sets', label: 'Bộ từ vựng', icon: BookOpen },
   { href: '/folders', label: 'Thư mục', icon: Folder },
+  { href: '/explore', label: 'Khám phá', icon: Globe },
   { href: '/history', label: 'Lịch sử học', icon: BarChart2 },
   { href: '/leaderboard', label: 'Bảng xếp hạng', icon: Trophy },
   { href: '/profile', label: 'Hồ sơ', icon: User },
+  { href: '/ai-extract', label: 'Trích xuất AI', icon: Sparkles },
+  { href: '/ai-settings', label: 'Cài đặt AI', icon: Cpu },
 ]
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {

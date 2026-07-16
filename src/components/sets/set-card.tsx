@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { BookOpen, Clock, ArrowRight } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { setUrl } from '@/lib/utils'
 
 interface SetCardProps {
   id: string
@@ -22,7 +23,7 @@ export function SetCard({ id, title, description, termCount, updatedAt, authorNa
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">
-            <Link href={`/sets/${id}`}>
+            <Link href={setUrl(id, title)}>
               <h3 className="font-semibold text-gray-900 hover:text-indigo-600 transition-colors truncate">
                 {title}
               </h3>
@@ -48,7 +49,7 @@ export function SetCard({ id, title, description, termCount, updatedAt, authorNa
         </div>
 
         <Link
-          href={`/sets/${id}`}
+          href={setUrl(id, title)}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
         >
           Học ngay

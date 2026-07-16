@@ -1,0 +1,288 @@
+================================================================
+QUIZVIET - TỔNG HỢP CHỨC NĂNG DỰ ÁN
+================================================================
+
+----------------------------------------------------------------
+1. TRANG CÔNG KHAI
+----------------------------------------------------------------
+- Trang chủ (/)
+  • Giới thiệu nền tảng, 5 chế độ học, thuật toán SM-2
+  • Hướng dẫn 3 bước
+  • Nút đăng nhập / đăng ký
+  • Tự redirect sang /dashboard nếu đã đăng nhập
+
+----------------------------------------------------------------
+2. XÁC THỰC NGƯỜI DÙNG
+----------------------------------------------------------------
+- Đăng nhập (/login)
+  • Đăng nhập bằng email + mật khẩu
+  • Phát hiện tài khoản bị khóa
+  • Chuyển hướng về dashboard sau khi đăng nhập
+  • Checkbox "Duy trì đăng nhập trong 30 ngày"
+    - Tick: JWT + cookie tồn tại 30 ngày (kể cả sau khi đóng browser)
+    - Không tick: JWT hết hạn sau 1 ngày
+  • Lưu email vào localStorage khi tick "ghi nhớ", tự điền lại lần sau
+  • Tự redirect sang /dashboard nếu đã đăng nhập
+
+- Đăng ký (/register)
+  • Nhập tên, email, mật khẩu (tối thiểu 6 ký tự)
+  • Kiểm tra email trùng lặp
+  • Chuyển hướng về trang đăng nhập
+  • Tự redirect sang /dashboard nếu đã đăng nhập
+
+----------------------------------------------------------------
+3. DASHBOARD
+----------------------------------------------------------------
+- Tổng quan (/dashboard)
+  • Thống kê: streak hiện tại, streak dài nhất, số bộ từ, số từ
+  • Danh sách bộ từ vựng gần đây
+  • Số buổi học hôm nay
+  • Nút tạo bộ từ vựng mới
+
+----------------------------------------------------------------
+4. QUẢN LÝ BỘ TỪ VỰNG
+----------------------------------------------------------------
+- Danh sách bộ từ (/sets)
+  • Tìm kiếm theo tiêu đề / mô tả (server-side, debounce 400ms)
+  • Phân trang (18 bộ / trang)
+  • Tab "Của tôi" / "Thùng rác"
+  • Khôi phục bộ từ đã xóa (hover card → Khôi phục)
+  • Nút tạo mới
+  • Inline actions trên mỗi card (hover hiện):
+    - Nút Share: copy link chia sẻ thân thiện vào clipboard
+    - Nút Globe/Lock: toggle công khai / riêng tư ngay tại danh sách
+  • Badge "Công khai" hiển thị trên card đang public
+
+- Tạo bộ từ mới (/sets/new)
+  • Nhập tiêu đề, mô tả, chọn thư mục
+  • Thêm/sửa/xóa từng thuật ngữ
+  • Import CSV / dữ liệu nhiều cột
+
+- Chi tiết bộ từ (/sets/[id]-[slug])
+  • URL thân thiện: /sets/<cuid>-<slug-tieu-de>
+  • Xem danh sách thuật ngữ (xem thêm / ẩn bớt)
+  • 5 nút vào chế độ học
+  • Nút chỉnh sửa, xóa, chia sẻ link (copy URL thân thiện)
+  • Toggle công khai / riêng tư (owner)
+  • Nút "Copy bộ từ" (người xem bộ từ public)
+
+- Chỉnh sửa bộ từ (/sets/[id]-[slug]/edit)
+  • Nút Hủy / Lưu thay đổi nằm trên header (không cần cuộn xuống)
+  • Sửa tiêu đề, mô tả, thư mục
+  • Thêm / sửa / xóa thuật ngữ (smart upsert — giữ SRData)
+  • Import thêm từ CSV
+
+- Import CSV nâng cao
+  • Hỗ trợ dấu phân cách: phẩy, tab, chấm phẩy, tùy chỉnh
+  • Phát hiện số cột tự động
+  • Cấu hình từng cột: Thuật ngữ / Định nghĩa / Bỏ qua
+  • Gộp nhiều cột vào thuật ngữ hoặc định nghĩa với ký tự nối tùy chỉnh
+  • Xem trước 3 dòng đầu trước khi import
+  • Hỗ trợ hàng tiêu đề cột
+
+- Copy bộ từ vựng
+  • Bộ từ public cho phép người khác copy về tài khoản của mình
+  • Bản copy mặc định riêng tư, tiêu đề thêm "(Copy)"
+
+- URL thân thiện người dùng
+  • Format: /sets/<cuid>-<slug> (ví dụ: /sets/clxyz123-ngu-phap-n3)
+  • Slug tự động từ tiêu đề (bỏ dấu tiếng Việt, thay khoảng trắng bằng -)
+  • URL cũ dạng /sets/<cuid> vẫn hoạt động (backward compatible)
+
+----------------------------------------------------------------
+5. KHÁM PHÁ
+----------------------------------------------------------------
+- Trang khám phá (/explore)
+  • Tìm kiếm bộ từ vựng công khai toàn hệ thống
+  • Phân trang (18 bộ / trang)
+  • Hiển thị tác giả, số thuật ngữ
+  • Nút Copy từng bộ từ (hover)
+  • Link vào hồ sơ tác giả
+
+----------------------------------------------------------------
+6. THƯ MỤC
+----------------------------------------------------------------
+- Danh sách thư mục (/folders)
+  • Tạo thư mục mới
+  • Xem số bộ từ trong thư mục
+  • Đổi tên, xóa thư mục (bộ từ không bị xóa theo)
+  • Toggle công khai / riêng tư cho từng thư mục
+  • Badge "Công khai" hiển thị trên card
+
+- Copy thư mục
+  • Thư mục public cho phép người khác copy toàn bộ
+  • Copy kèm tất cả bộ từ public bên trong
+
+----------------------------------------------------------------
+7. CHẾ ĐỘ HỌC
+----------------------------------------------------------------
+Tất cả chế độ đều hỗ trợ:
+  • Chọn chiều học: Thuật ngữ → Định nghĩa / Định nghĩa → Thuật ngữ / Cả hai
+  • Lưu cài đặt chiều học vào localStorage
+
+A. Thẻ ghi nhớ (/study/[id]/flashcards)
+   • Lật thẻ 3D khi nhấp
+   • Điều hướng bằng nút hoặc phím ← →, Space lật
+   • Đánh dấu "Đã biết" để theo dõi tiến độ
+   • Thanh tiến trình
+   • Màn hình hoàn thành với thống kê
+
+B. Học - Spaced Repetition (/study/[id]/learn)
+   • Thuật toán SM-2 tự động chọn từ cần ôn
+   • Tối đa 20 câu hỏi mỗi phiên
+   • Dropdown cài đặt gộp: Loại câu hỏi + Chiều trả lời
+   • Chọn loại câu hỏi: Ngẫu nhiên / Trắc nghiệm / Tự luận
+   • Trắc nghiệm: 4 đáp án (1 đúng, 3 sai cùng phía chiều học)
+   • Tự luận: gõ đáp án, so sánh không phân biệt hoa thường
+   • Hiển thị đáp án đúng khi sai
+   • Nút "Đã biết từ này, bỏ qua"
+   • Ô nhập tự động focus sang câu tiếp theo
+   • Thống kê đúng/sai realtime
+   • Màn hình kết quả với điểm %
+
+C. Tự luận (/study/[id]/write)
+   • Xem câu hỏi (thuật ngữ hoặc định nghĩa), gõ đáp án
+   • So sánh từng ký tự, highlight đúng/sai
+   • Hiển thị đáp án đúng kèm diff sau khi sai
+   • Nút "Đã biết từ này"
+   • Ô nhập tự động focus
+
+D. Kiểm tra (/study/[id]/test)
+   • Bài thi tổng hợp nhiều dạng câu hỏi:
+     - Trắc nghiệm (40%)
+     - Điền vào chỗ trống (30%)
+     - Đúng / Sai (20%)
+     - Ghép cặp (1 câu)
+   • Nộp bài rồi mới chấm điểm
+   • Trang kết quả: điểm %, số câu đúng
+   • Chi tiết từng câu: đáp án của người dùng vs đáp án đúng
+   • Chọn chiều học ảnh hưởng toàn bộ dạng câu
+
+E. Ghép thẻ (/study/[id]/match)
+   • Trò chơi ghép cặp thuật ngữ - định nghĩa
+   • Tối đa 10 cặp ngẫu nhiên
+   • Chọn chiều học (DirectionPicker trong header)
+   • Đồng hồ đếm giờ
+   • Hiệu ứng shake khi ghép sai
+   • Lưu kỷ lục thời gian tốt nhất trong phiên
+   • Nút xáo trộn lại
+
+----------------------------------------------------------------
+8. LỊCH SỬ HỌC
+----------------------------------------------------------------
+- Lịch sử cá nhân (/history)
+  • Xem theo: Ngày / Tuần / Tháng / Năm
+  • Biểu đồ buổi học theo thời gian
+  • Thống kê từng chế độ học
+
+----------------------------------------------------------------
+9. BẢNG XẾP HẠNG & HỒ SƠ CÔNG KHAI
+----------------------------------------------------------------
+- Bảng xếp hạng (/leaderboard)
+  • Top 10 người học nhiều nhất
+  • Tab lọc: Tuần này / Tháng này / Tất cả
+  • Huy chương 🥇🥈🥉 cho top 3
+  • Thống kê: số bộ từ, streak, số buổi học
+  • Tìm kiếm user theo tên
+  • Link vào hồ sơ từng người
+
+- Hồ sơ công khai (/users/[id])
+  • Avatar, tên, ngày tham gia
+  • Streak hiện tại, streak dài nhất, tổng buổi học
+  • Biểu đồ lịch sử học theo Ngày / Tuần / Tháng / Năm
+  • Tỷ lệ sử dụng từng chế độ học
+  • Danh sách bộ từ vựng công khai + nút Copy từng bộ
+
+----------------------------------------------------------------
+10. HỒ SƠ CÁ NHÂN
+----------------------------------------------------------------
+- Hồ sơ (/profile)
+  • Xem và sửa tên hiển thị
+  • Upload ảnh đại diện từ máy (JPG/PNG/WEBP/GIF, tối đa 2MB)
+    - Hover vào ảnh → hiện icon camera để thay
+  • Đổi mật khẩu (cần nhập mật khẩu cũ)
+
+----------------------------------------------------------------
+11. QUẢN TRỊ (Admin)
+----------------------------------------------------------------
+- Dashboard admin (/admin)
+  • Thống kê hệ thống: tổng user, bộ từ, buổi học hôm nay, user mới tuần này
+
+- Quản lý người dùng (/admin/users)
+  • Bảng danh sách user: tên, email, vai trò, số bộ từ, số buổi học, trạng thái
+  • Khóa / mở khóa tài khoản
+
+- Quản lý nội dung (/admin/content)
+  • Bảng danh sách bộ từ: tiêu đề, tác giả, số từ, trạng thái
+  • Tìm kiếm theo tiêu đề hoặc tác giả
+  • Xóa vĩnh viễn bộ từ
+
+----------------------------------------------------------------
+12. AI TRÍCH XUẤT TỪ VỰNG
+----------------------------------------------------------------
+- Cài đặt AI (/ai-settings)
+  • Chọn nhà cung cấp: Gemini / DeepSeek
+  • Chọn model (hiển thị gợi ý "Khuyến nghị" cho model tốt nhất)
+  • Nhập API key (ẩn/hiện, tùy chọn khi cập nhật lại)
+  • Trạng thái cấu hình: hiển thị badge Đã cấu hình / Chưa cấu hình
+  • Panel hướng dẫn bên phải: tab Gemini / DeepSeek / So sánh Model
+
+- Trích xuất từ vựng (/ai-extract)
+  • Toggle chế độ nhập: URL / Văn bản
+  • URL: nhập link bài đọc tiếng Nhật, Enter để gửi
+  • Văn bản: dán text, đếm ký tự, giới hạn 8000 ký tự
+  • Tên bộ từ tùy chọn (tự đặt tên nếu để trống)
+  • Kết quả: bảng từ vựng (Kanji, Cách đọc, Nghĩa tiếng Việt)
+  • Lưu kết quả thành bộ thẻ học (/sets)
+  • Lịch sử trích xuất: expand/collapse, xóa, tạo bộ thẻ từ lịch sử
+  • Nghĩa từ vựng trả về bằng tiếng Việt có dấu
+
+- API AI:
+  • /api/ai/config    - GET/PUT cấu hình provider + model + API key
+  • /api/ai/extract   - POST trích xuất từ vựng từ URL hoặc văn bản
+  • /api/ai/vocab-sets       - GET danh sách bộ từ đã trích xuất
+  • /api/ai/vocab-sets/[id]  - GET chi tiết / DELETE bộ từ
+
+----------------------------------------------------------------
+13. KỸ THUẬT & HẠ TẦNG
+----------------------------------------------------------------
+- Framework: Next.js 15 (App Router, TypeScript)
+- UI: Tailwind CSS v4
+- Database: Prisma 7 (SQLite dev / PostgreSQL staging+prod)
+- Auth: NextAuth.js v5 (Credentials + JWT)
+  • Session 30 ngày khi tick "Duy trì đăng nhập"
+  • Session 1 ngày khi không tick
+- Thuật toán: SM-2 Spaced Repetition
+- AI: Google Gemini API / DeepSeek API (per-user config)
+- Favicon: SVG icon 2 thẻ flashcard + dấu tích xanh
+- Logging: JSON structured logs (middleware + API errors) via src/lib/logger.ts
+
+- 3 môi trường:
+  • Development: SQLite local (npm run dev)
+  • Staging: PostgreSQL qua Docker (npm run staging:dev)
+  • Production: Docker + Dokploy + Traefik + volume mount cho uploads
+
+- API Endpoints:
+  • /api/auth/*              - Xác thực
+  • /api/sets/*              - CRUD bộ từ vựng (phân trang, tìm kiếm, trashed)
+  • /api/sets/[id]/copy      - Copy bộ từ vựng public
+  • /api/sets/[id]/restore   - Khôi phục bộ từ đã xóa
+  • /api/folders/*           - CRUD thư mục
+  • /api/folders/[id]/copy   - Copy thư mục public
+  • /api/explore             - Tìm kiếm bộ từ công khai toàn hệ thống
+  • /api/sr/*                - Spaced Repetition data
+  • /api/sessions            - Ghi lại buổi học + cập nhật streak
+  • /api/profile             - Hồ sơ cá nhân
+  • /api/upload/avatar       - Upload ảnh đại diện
+  • /api/dashboard           - Thống kê dashboard
+  • /api/history             - Lịch sử học
+  • /api/leaderboard         - Bảng xếp hạng (hỗ trợ ?period=week|month|all)
+  • /api/users/*             - Hồ sơ & tìm kiếm user
+  • /api/admin/*             - Quản trị hệ thống
+  • /api/ai/config           - Cấu hình AI provider
+  • /api/ai/extract          - Trích xuất từ vựng AI
+  • /api/ai/vocab-sets/*     - Quản lý bộ từ AI đã trích xuất
+
+================================================================
+Tổng cộng: 26+ trang | 30+ API route | 11 model DB | 5 chế độ học
+================================================================

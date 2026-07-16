@@ -1,7 +1,11 @@
+import { redirect } from 'next/navigation'
+import { auth } from '@/lib/auth'
 import Link from 'next/link'
 import { BookOpen, Brain, PenLine, BarChart3, Zap, CheckCircle } from 'lucide-react'
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await auth()
+  if (session?.user) redirect('/dashboard')
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}

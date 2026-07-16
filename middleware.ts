@@ -1,11 +1,20 @@
 import { auth } from './src/lib/auth-edge'
 
 export default auth((req) => {
-  const { nextUrl } = req
+  const { nextUrl, method } = req
   const session = req.auth
   const isLoggedIn = !!session
+  const userId = (session?.user as any)?.id ?? '-'
 
-  const protectedPaths = ['/dashboard', '/sets', '/folders', '/profile', '/study', '/admin']
+  // Request logging
+  console.log(JSON.stringify({
+    t: new Date().toISOString(),
+    method,
+    path: nextUrl.pathname,
+    userId,
+  }))
+
+  const protectedPaths = ['/dashboard', '/sets', '/folders', '/explore', '/profile', '/study', '/admin', '/ai-settings', '/ai-extract']
   const isProtected = protectedPaths.some(p => nextUrl.pathname.startsWith(p))
 
   if (isProtected && !isLoggedIn) {
@@ -20,5 +29,5 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }

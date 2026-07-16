@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toaster'
-import { User, Lock, Camera, Save } from 'lucide-react'
+import { User, Lock, Camera, Save, Loader2 } from 'lucide-react'
 
 export default function ProfilePage() {
   const { data: session, update } = useSession()
@@ -16,6 +16,8 @@ export default function ProfilePage() {
   const [password, setPassword] = useState({ old: '', new: '', confirm: '' })
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (session?.user) {
@@ -25,6 +27,29 @@ export default function ProfilePage() {
       })
     }
   }, [session])
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/upload/avatar', { method: 'POST', body: form })
+      const data = await res.json()
+      if (res.ok) {
+        setProfile(p => ({ ...p, image: data.url }))
+        showToast('Đã tải ảnh lên', 'success')
+      } else {
+        showToast(data.error || 'Lỗi tải ảnh', 'error')
+      }
+    } catch {
+      showToast('Đã có lỗi xảy ra', 'error')
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   const handleSaveProfile = async () => {
     setIsSavingProfile(true)
@@ -85,19 +110,39 @@ export default function ProfilePage() {
 
       {/* Avatar Preview */}
       <div className="flex items-center gap-4">
-        <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
-          {profile.image ? (
-            <img src={profile.image} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-indigo-700 text-2xl font-bold">
-              {profile.name?.charAt(0).toUpperCase() || 'U'}
-            </span>
-          )}
+        <div className="relative group">
+          <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
+            {profile.image ? (
+              <img src={profile.image} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-indigo-700 text-2xl font-bold">
+                {profile.name?.charAt(0).toUpperCase() || 'U'}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            {isUploading
+              ? <Loader2 size={20} className="text-white animate-spin" />
+              : <Camera size={20} className="text-white" />}
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
         </div>
         <div>
           <p className="font-semibold text-gray-900 text-lg">{profile.name || 'Chưa đặt tên'}</p>
           <p className="text-gray-500 text-sm">{session?.user?.email}</p>
           <p className="text-xs text-gray-400 mt-0.5 capitalize">{(session?.user as any)?.role || 'user'}</p>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="mt-1 text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+          >
+            <Camera size={12} />
+            {isUploading ? 'Đang tải...' : 'Đổi ảnh đại diện'}
+          </button>
         </div>
       </div>
 
@@ -122,18 +167,6 @@ export default function ProfilePage() {
               value={session?.user?.email || ''}
               disabled
               className="block w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <Camera size={14} />
-              URL ảnh đại diện
-            </label>
-            <input
-              value={profile.image}
-              onChange={e => setProfile(p => ({ ...p, image: e.target.value }))}
-              placeholder="https://example.com/avatar.jpg"
-              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
           <div className="flex justify-end">

@@ -17,6 +17,8 @@ services:
       NEXTAUTH_SECRET: ${AUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NODE_ENV: production
+    volumes:
+      - uploads_data:/app/public/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -38,3 +40,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

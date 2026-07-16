@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/toaster'
 import { ImportModal } from '@/components/sets/import-modal'
 import { Save, Upload, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { setUrl } from '@/lib/utils'
 
 interface Folder {
   id: string
@@ -71,7 +72,7 @@ export default function NewSetPage() {
       if (res.ok) {
         const data = await res.json()
         showToast('Tạo bộ từ vựng thành công!', 'success')
-        router.push(`/sets/${data.id}`)
+        router.push(setUrl(data.id, title.trim()))
       } else {
         const err = await res.json()
         showToast(err.error || 'Lỗi khi tạo bộ từ vựng', 'error')

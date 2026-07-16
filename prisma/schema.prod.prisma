@@ -7,21 +7,55 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String         @id @default(cuid())
+  email         String         @unique
   name          String?
   password      String
   image         String?
-  role          String    @default("user")
-  isLocked      Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          String         @default("user")
+  isLocked      Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   studySets     StudySet[]
   folders       Folder[]
   studySessions StudySession[]
   streak        Streak?
   knownTerms    KnownTerm[]
   srData        SRData[]
+  aiConfig      UserAIConfig?
+  aiVocabSets   AIVocabSet[]
+}
+
+model UserAIConfig {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider  String
+  model     String
+  apiKey    String
+  updatedAt DateTime @updatedAt
+}
+
+model AIVocabSet {
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  sourceType    String
+  sourcePreview String           @default("")
+  itemCount     Int              @default(0)
+  createdAt     DateTime         @default(now())
+  items         AIVocabSetItem[]
+}
+
+model AIVocabSetItem {
+  id         String     @id @default(cuid())
+  vocabSetId String
+  vocabSet   AIVocabSet @relation(fields: [vocabSetId], references: [id], onDelete: Cascade)
+  vocabulary String
+  reading    String
+  meaning    String
+  order      Int        @default(0)
 }
 
 model Streak {
@@ -89,6 +123,7 @@ model Folder {
   userId    String
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   studySets StudySet[]
+  isPublic  Boolean    @default(false)
   createdAt DateTime   @default(now())
 }
 

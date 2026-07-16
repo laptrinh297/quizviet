@@ -7,6 +7,8 @@ import { useToast } from '@/components/ui/toaster'
 import { Trophy, RotateCcw, ChevronLeft, Timer } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { useStudyDirection, type Direction } from '@/hooks/use-study-direction'
+import { DirectionPicker } from '@/components/study/direction-picker'
 
 interface Term {
   id: string
@@ -30,6 +32,7 @@ export default function MatchPage() {
   const setId = params.setId as string
   const { showToast } = useToast()
 
+  const { direction, setDirection } = useStudyDirection()
   const [terms, setTerms] = useState<Term[]>([])
   const [cards, setCards] = useState<Card[]>([])
   const [selected, setSelected] = useState<Card | null>(null)
@@ -54,20 +57,17 @@ export default function MatchPage() {
       .finally(() => setIsLoading(false))
   }, [setId])
 
-  const buildGame = (allTerms: Term[]) => {
+  const buildGame = (allTerms: Term[], dir?: Direction) => {
+    const d = dir ?? direction
     const pool = shuffle(allTerms).slice(0, 10)
-    const termCards: Card[] = pool.map(t => ({
-      id: `term-${t.id}`,
-      content: t.term,
-      type: 'term',
-      termId: t.id,
-    }))
-    const defCards: Card[] = pool.map(t => ({
-      id: `def-${t.id}`,
-      content: t.definition,
-      type: 'definition',
-      termId: t.id,
-    }))
+    const termCards: Card[] = pool.map((t, i) => {
+      const showTerm = d === 'definition' ? true : d === 'term' ? false : i % 2 === 0
+      return { id: `term-${t.id}`, content: showTerm ? t.term : t.definition, type: 'term' as const, termId: t.id }
+    })
+    const defCards: Card[] = pool.map((t, i) => {
+      const showTerm = d === 'definition' ? true : d === 'term' ? false : i % 2 === 0
+      return { id: `def-${t.id}`, content: showTerm ? t.definition : t.term, type: 'definition' as const, termId: t.id }
+    })
     setCards(shuffle([...termCards, ...defCards]))
     setSelected(null)
     setMatched(new Set())
@@ -144,9 +144,15 @@ export default function MatchPage() {
             <ChevronLeft size={18} />
             <span className="text-sm font-medium">{setTitle}</span>
           </Link>
-          <div className="flex items-center gap-2 text-lg font-mono font-bold text-indigo-600">
-            <Timer size={18} />
-            {formatTime(timer)}
+          <div className="flex items-center gap-3">
+            <DirectionPicker
+              direction={direction}
+              onChange={d => { setDirection(d); buildGame(terms, d) }}
+            />
+            <div className="flex items-center gap-2 text-lg font-mono font-bold text-indigo-600">
+              <Timer size={18} />
+              {formatTime(timer)}
+            </div>
           </div>
         </div>
       </div>

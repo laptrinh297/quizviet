@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Flame, BookOpen, Trophy, ChevronLeft, Zap, BarChart2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Flame, BookOpen, Trophy, ChevronLeft, Zap, BarChart2, Copy } from 'lucide-react'
+import { useToast } from '@/components/ui/toaster'
+import { cn, setUrl } from '@/lib/utils'
 import {
   type Period,
   PeriodTabs,
@@ -46,9 +47,12 @@ const MODE_COLORS: Record<string, string> = {
 
 export default function UserProfilePage() {
   const params = useParams()
+  const router = useRouter()
+  const { showToast } = useToast()
   const userId = params.id as string
 
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [copyingId, setCopyingId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -79,6 +83,23 @@ export default function UserProfilePage() {
   useEffect(() => {
     fetchHistory(period)
   }, [period, fetchHistory])
+
+  const handleCopySet = async (setId: string, title: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    setCopyingId(setId)
+    try {
+      const res = await fetch(`/api/sets/${setId}/copy`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        showToast('Đã copy vào bộ từ của bạn!', 'success')
+        router.push(setUrl(data.id, title))
+      } else {
+        showToast(data.error || 'Lỗi khi copy', 'error')
+      }
+    } finally {
+      setCopyingId(null)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -223,7 +244,7 @@ export default function UserProfilePage() {
         ) : (
           <div className="space-y-3">
             {studySets.map(set => (
-              <Link key={set.id} href={`/sets/${set.id}`}>
+              <Link key={set.id} href={setUrl(set.id, set.title)}>
                 <div className="flex items-center gap-4 p-4 bg-white rounded-xl border-2 border-gray-200 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer">
                   <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
                     <BookOpen size={18} className="text-indigo-600" />
@@ -234,9 +255,19 @@ export default function UserProfilePage() {
                       <p className="text-xs text-gray-400 truncate">{set.description}</p>
                     )}
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-bold text-indigo-600">{set._count.terms}</p>
-                    <p className="text-xs text-gray-400">từ</p>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <p className="font-bold text-indigo-600">{set._count.terms}</p>
+                      <p className="text-xs text-gray-400">từ</p>
+                    </div>
+                    <button
+                      onClick={e => handleCopySet(set.id, set.title, e)}
+                      disabled={copyingId === set.id}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                      title="Copy bộ từ này"
+                    >
+                      <Copy size={14} />
+                    </button>
                   </div>
                 </div>
               </Link>

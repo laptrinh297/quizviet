@@ -22,6 +22,38 @@ export async function POST(req: NextRequest) {
     },
   })
 
+  // Update streak
+  const now = new Date()
+  const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0)
+  const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1)
+
+  const streak = await prisma.streak.findUnique({ where: { userId: session.user.id } })
+  if (!streak) {
+    await prisma.streak.create({
+      data: { userId: session.user.id, currentStreak: 1, longestStreak: 1, lastStudiedAt: now },
+    })
+  } else {
+    const last = streak.lastStudiedAt ? new Date(streak.lastStudiedAt) : null
+    if (last) last.setHours(0, 0, 0, 0)
+
+    let newCurrent = streak.currentStreak
+    if (!last || last < yesterdayStart) {
+      newCurrent = 1 // streak broken
+    } else if (last.getTime() === yesterdayStart.getTime()) {
+      newCurrent = streak.currentStreak + 1 // continue
+    }
+    // last === today → no change
+
+    await prisma.streak.update({
+      where: { userId: session.user.id },
+      data: {
+        currentStreak: newCurrent,
+        longestStreak: Math.max(streak.longestStreak, newCurrent),
+        lastStudiedAt: now,
+      },
+    })
+  }
+
   return NextResponse.json(studySession, { status: 201 })
 }
 

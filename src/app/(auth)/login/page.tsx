@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
@@ -9,12 +9,24 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { LogIn, AlertCircle } from 'lucide-react'
 
+const REMEMBER_KEY = 'quizviet_remember_email'
+
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('user@quizviet.com')
-  const [password, setPassword] = useState('User123!')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  // Pre-fill saved email on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(REMEMBER_KEY)
+    if (saved) {
+      setEmail(saved)
+      setRememberMe(true)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,6 +37,7 @@ export default function LoginPage() {
       const result = await signIn('credentials', {
         email,
         password,
+        rememberMe: String(rememberMe),
         redirect: false,
       })
 
@@ -35,10 +48,15 @@ export default function LoginPage() {
           setError('Email hoặc mật khẩu không đúng.')
         }
       } else {
+        if (rememberMe) {
+          localStorage.setItem(REMEMBER_KEY, email)
+        } else {
+          localStorage.removeItem(REMEMBER_KEY)
+        }
         router.push('/dashboard')
         router.refresh()
       }
-    } catch (err) {
+    } catch {
       setError('Đã có lỗi xảy ra. Vui lòng thử lại.')
     } finally {
       setIsLoading(false)
@@ -82,6 +100,19 @@ export default function LoginPage() {
             required
             autoComplete="current-password"
           />
+
+          <div className="flex items-center gap-2">
+            <input
+              id="rememberMe"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={e => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+            />
+            <label htmlFor="rememberMe" className="text-sm text-gray-600 cursor-pointer select-none">
+              Duy trì đăng nhập trong 30 ngày
+            </label>
+          </div>
 
           <Button
             type="submit"

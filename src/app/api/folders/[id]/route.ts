@@ -7,7 +7,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { name } = await req.json()
+  const { name, isPublic } = await req.json()
 
   const folder = await prisma.folder.findUnique({ where: { id } })
   if (!folder || folder.userId !== session.user.id) {
@@ -16,7 +16,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const updated = await prisma.folder.update({
     where: { id },
-    data: { name: name.trim() },
+    data: {
+      ...(name !== undefined ? { name: name.trim() } : {}),
+      ...(typeof isPublic === 'boolean' ? { isPublic } : {}),
+    },
   })
 
   return NextResponse.json(updated)
