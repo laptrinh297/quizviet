@@ -1,5 +1,9 @@
 # Production — dùng cho Dokploy
 # Các biến ${...} được set trong UI của Dokploy (Environment Variables)
+#
+# LƯU Ý: Không cần khai báo "ports" cho service app.
+# Dokploy dùng Traefik làm reverse proxy, tự điều hướng traffic vào container.
+# Chỉ cần cấu hình domain trong Dokploy UI.
 
 services:
   app:
@@ -16,8 +20,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "3000:3000"
 
   db:
     image: postgres:16-alpine
