@@ -50,4 +50,4 @@ USER nextjs
 EXPOSE 3000
 
 # Migrate schema rồi mới start app
-CMD ["sh", "-c", "npx prisma db push --skip-generate && node server.js"]
+CMD ["sh", "-c", "npx prisma db push && node server.js"]
