@@ -11,6 +11,7 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "db:reset": "prisma db push --force-reset && prisma db seed",
+    "db:set-admin": "tsx scripts/set-admin.ts",
     "staging:up": "docker compose -f docker-compose.staging.yml up -d",
     "staging:down": "docker compose -f docker-compose.staging.yml down",
     "staging:db:push": "dotenv -e .env.staging -- prisma db push",

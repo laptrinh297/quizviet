@@ -39,10 +39,21 @@ function stripHtml(html: string): string {
 }
 
 export async function fetchUrlContent(url: string): Promise<string> {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VocabExtractor/1.0)' },
-    redirect: 'follow',
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15_000)
+  let res: Response
+  try {
+    res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VocabExtractor/1.0)' },
+      redirect: 'follow',
+      signal: controller.signal,
+    })
+  } catch (e: any) {
+    if (e?.name === 'AbortError') throw new Error('Tải URL quá thời gian (15s)')
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
   if (!res.ok) throw new Error(`Không thể tải URL: HTTP ${res.status}`)
 
   const ct = res.headers.get('content-type') ?? ''
@@ -79,17 +90,28 @@ ${text}`
 // ─── AI calls ────────────────────────────────────────────────────────────────
 
 async function callGemini(apiKey: string, model: string, prompt: string): Promise<string> {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1 },
-      }),
-    }
-  )
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 90_000)
+  let res: Response
+  try {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1 },
+        }),
+        signal: controller.signal,
+      }
+    )
+  } catch (e: any) {
+    if (e?.name === 'AbortError') throw new Error('Gemini API quá thời gian (90s)')
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
   if (!res.ok) {
     const err = await res.text()
     throw new Error(`Gemini API lỗi ${res.status}: ${err.slice(0, 200)}`)
@@ -101,18 +123,29 @@ async function callGemini(apiKey: string, model: string, prompt: string): Promis
 }
 
 async function callDeepSeek(apiKey: string, model: string, prompt: string): Promise<string> {
-  const res = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.1,
-    }),
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 90_000)
+  let res: Response
+  try {
+    res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+      }),
+      signal: controller.signal,
+    })
+  } catch (e: any) {
+    if (e?.name === 'AbortError') throw new Error('DeepSeek API quá thời gian (90s)')
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
   if (!res.ok) {
     const err = await res.text()
     throw new Error(`DeepSeek API lỗi ${res.status}: ${err.slice(0, 200)}`)

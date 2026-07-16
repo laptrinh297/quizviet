@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+
+export const maxDuration = 120 // seconds
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { extractVocabulary, type AIProvider } from '@/lib/ai-extractor'

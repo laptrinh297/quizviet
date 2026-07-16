@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toaster'
-import { Users, Lock, Unlock, Shield, User } from 'lucide-react'
+import Link from 'next/link'
+import { Users, Lock, Unlock, Shield, User, ChevronRight } from 'lucide-react'
 
 interface UserData {
   id: string
@@ -80,17 +81,18 @@ export default function AdminUsersPage() {
                   {users.map(user => (
                     <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
+                        <Link href={`/admin/users/${user.id}`} className="flex items-center gap-3 group">
                           <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
                             <span className="text-indigo-700 text-sm font-semibold">
                               {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-900">{user.name || '(chưa đặt tên)'}</p>
+                            <p className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">{user.name || '(chưa đặt tên)'}</p>
                             <p className="text-xs text-gray-500">{user.email}</p>
                           </div>
-                        </div>
+                          <ChevronRight size={14} className="text-gray-300 group-hover:text-indigo-400 transition-colors ml-1" />
+                        </Link>
                       </td>
                       <td className="px-6 py-4">
                         {user.role === 'admin' ? (
